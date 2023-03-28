@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 fastapi = "==0.95.0"
 pre-commit = "==3.2.1"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [dev-packages]
 
