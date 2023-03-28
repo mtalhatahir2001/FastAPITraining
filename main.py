@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import Body, FastAPI
 
 app = FastAPI()
 
@@ -29,3 +29,9 @@ async def filter_books(category: str):
         if i.get("category").lower() == category.lower():
             filtered_list.append(i)
     return filtered_list
+
+
+@app.post("/books/create_book")
+async def add_new_books(new_book=Body()):
+    BOOKS.append(new_book)
+    return {"success": "Book added"}
