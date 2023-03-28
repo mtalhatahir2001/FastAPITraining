@@ -44,3 +44,12 @@ async def add_new_books(new_book=Body()):
             BOOKS[index] = new_book
             return {"success": "Book Updated"}
     return {"error": "No matching title found"}
+
+
+@app.delete("/books/delete_book/{book_title}")
+async def get_book_by_name(book_title: str):
+    for index, i in enumerate(BOOKS):
+        if i.get("title").lower() == book_title.lower():
+            del BOOKS[index]
+            return {"success": "Book Deleted"}
+    return {"error": "No matching title found"}
