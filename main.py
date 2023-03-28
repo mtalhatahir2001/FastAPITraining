@@ -31,6 +31,15 @@ async def filter_books(category: str):
     return filtered_list
 
 
+@app.get("/books/filter/{author}")
+async def filter_books(author: str):
+    filtered_list = list()
+    for i in BOOKS:
+        if i.get("author").lower() == author.lower():
+            filtered_list.append(i)
+    return filtered_list
+
+
 @app.post("/books/create_book")
 async def add_new_books(new_book=Body()):
     BOOKS.append(new_book)
