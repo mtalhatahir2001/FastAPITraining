@@ -35,3 +35,12 @@ async def filter_books(category: str):
 async def add_new_books(new_book=Body()):
     BOOKS.append(new_book)
     return {"success": "Book added"}
+
+
+@app.put("/books/update_book")
+async def add_new_books(new_book=Body()):
+    for index, i in enumerate(BOOKS):
+        if i.get("title").lower() == new_book.get("title").lower():
+            BOOKS[index] = new_book
+            return {"success": "Book Updated"}
+    return {"error": "No matching title found"}
