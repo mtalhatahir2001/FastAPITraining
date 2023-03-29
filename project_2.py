@@ -52,3 +52,13 @@ def get_all_books(book_request: BookRequest):
     book = Book(**book_request.dict())
     book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
     BOOKS.append(book)
+
+
+# Similarly we can also write put and delete methods
+@app.get("/books/")
+def get_books_by_rating(rating: float):
+    result_books = list()
+    for i in BOOKS:
+        if i.rating == rating:
+            result_books.append(i)
+    return result_books
