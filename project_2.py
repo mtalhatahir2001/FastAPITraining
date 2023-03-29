@@ -1,7 +1,8 @@
 from typing import Optional
 
-from fastapi import FastAPI, Path, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from pydantic import BaseModel, Field
+from starlette import status
 
 app = FastAPI()
 
@@ -51,12 +52,12 @@ BOOKS = [
 ]
 
 
-@app.get("/books")
+@app.get("/books", status_code=status.HTTP_200_OK)
 async def get_all_books():
     return BOOKS
 
 
-@app.post("/books/create_book")
+@app.post("/books/create_book", status_code=status.HTTP_201_CREATED)
 async def get_all_books(book_request: BookRequest):
     book = Book(**book_request.dict())
     book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
@@ -64,20 +65,26 @@ async def get_all_books(book_request: BookRequest):
 
 
 # Similarly we can also write put and delete methods
-@app.get("/books/")
+@app.get("/books/", status_code=status.HTTP_200_OK)
 async def get_books_by_rating(rating: float = Query(gt=0, lt=6)):
     result_books = list()
     for i in BOOKS:
         if i.rating == rating:
             result_books.append(i)
-    return result_books
+    if len(result_books) == 0:
+        raise HTTPException(status_code=404, detail="No record found")
+    else:
+        return result_books
 
 
 # Assigment question to filter books by publish_date
-@app.get("/books/{publish_date}")
+@app.get("/books/{publish_date}", status_code=status.HTTP_200_OK)
 async def get_books_by_rating(publish_date: float = Path(gt=1899, lt=3000)):
     result_books = list()
     for i in BOOKS:
         if i.publish_date == publish_date:
             result_books.append(i)
-    return result_books
+    if len(result_books) == 0:
+        raise HTTPException(status_code=404, detail="No record found")
+    else:
+        return result_books
