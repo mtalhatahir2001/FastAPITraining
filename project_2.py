@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
@@ -16,11 +18,21 @@ class Book:
 
 
 class BookRequest(BaseModel):
-    id: int
+    id: Optional[int]
     title: str = Field(min_length=3)
     author: str = Field(min_length=1)
     description: str = Field(max_length=100, min_length=1)
     rating: float = Field(gt=0, lt=6)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "title": "title of the book",
+                "author": "person who wrote the book",
+                "description": "one liners about the book",
+                "rating": 4,
+            }
+        }
 
 
 BOOKS = [
@@ -38,4 +50,5 @@ def get_all_books():
 @app.post("/books/create_book")
 def get_all_books(book_request: BookRequest):
     book = Book(**book_request.dict())
+    book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
     BOOKS.append(book)
