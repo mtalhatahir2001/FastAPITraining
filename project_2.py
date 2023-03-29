@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 from pydantic import BaseModel, Field
 
 app = FastAPI()
@@ -52,12 +52,12 @@ BOOKS = [
 
 
 @app.get("/books")
-def get_all_books():
+async def get_all_books():
     return BOOKS
 
 
 @app.post("/books/create_book")
-def get_all_books(book_request: BookRequest):
+async def get_all_books(book_request: BookRequest):
     book = Book(**book_request.dict())
     book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
     BOOKS.append(book)
@@ -65,7 +65,7 @@ def get_all_books(book_request: BookRequest):
 
 # Similarly we can also write put and delete methods
 @app.get("/books/")
-def get_books_by_rating(rating: float):
+async def get_books_by_rating(rating: float):
     result_books = list()
     for i in BOOKS:
         if i.rating == rating:
@@ -75,7 +75,7 @@ def get_books_by_rating(rating: float):
 
 # Assigment question to filter books by publish_date
 @app.get("/books/{publish_date}")
-def get_books_by_rating(publish_date: float):
+async def get_books_by_rating(publish_date: float = Path(gt=1899, lt=3000)):
     result_books = list()
     for i in BOOKS:
         if i.publish_date == publish_date:
