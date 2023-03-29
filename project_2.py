@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Query
 from pydantic import BaseModel, Field
 
 app = FastAPI()
@@ -65,7 +65,7 @@ async def get_all_books(book_request: BookRequest):
 
 # Similarly we can also write put and delete methods
 @app.get("/books/")
-async def get_books_by_rating(rating: float):
+async def get_books_by_rating(rating: float = Query(gt=0, lt=6)):
     result_books = list()
     for i in BOOKS:
         if i.rating == rating:
