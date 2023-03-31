@@ -1,7 +1,8 @@
 from database_config import local_session
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from models import Todo
 from pydantic import BaseModel, Field
+from sqlalchemy import and_
 from starlette import status
 
 from .auth import get_current_user, get_db
@@ -48,3 +49,32 @@ async def add_todo(
         print(e)
         raise HTTPException(status_code=500, detail="todo_not_inserted")
     return {"detail": "new_todo_created"}
+
+
+@todo_router.put("/update_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
+async def update_todo(
+    todo_id: int = Path(gt=-1),
+    todo: TodoModel = None,
+    user: dict = Depends(get_current_user),
+    db: local_session = Depends(get_db),
+) -> dict:
+    if user == None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    result = (
+        db.query(Todo)
+        .filter(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        .first()
+    )
+    if result == None:
+        raise HTTPException(status_code=404, detail="todo_not_found")
+    else:
+        result.title = todo.title
+        result.discription = todo.discription
+        result.priority = todo.priority
+    try:
+        db.add(result)
+        db.commit()
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="todo_not_inserted")
+    return {"detail": "todo_updated"}
