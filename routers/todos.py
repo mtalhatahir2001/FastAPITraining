@@ -78,3 +78,22 @@ async def update_todo(
         print(e)
         raise HTTPException(status_code=500, detail="todo_not_inserted")
     return {"detail": "todo_updated"}
+
+
+@todo_router.delete("/delete_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
+async def update_todo(
+    todo_id: int = Path(gt=-1),
+    user: dict = Depends(get_current_user),
+    db: local_session = Depends(get_db),
+) -> dict:
+    if user == None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    db.query(Todo).filter(
+        and_(Todo.id == todo_id, Todo.user_id == user.get("id"))
+    ).delete()
+    try:
+        db.commit()
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="todo_not_deleted")
+    return {"detail": "todo_deleted"}
