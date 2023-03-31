@@ -16,6 +16,15 @@ class TodoModel(BaseModel):
     discription: str = Field(min_length=0, max_length=100)
     priority: int = Field(gt=-1, lt=6)
 
+    class Config:
+        schema_extra = {
+            "example": {
+                "title": "Title of the todo",
+                "discription": "Some detail about todo",
+                "priority": 3,
+            }
+        }
+
 
 @todo_router.get("/")
 async def get_all_todos(db: local_session = Depends(get_db)):
