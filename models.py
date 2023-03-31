@@ -15,7 +15,7 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(10), nullable=False)
     first_name: Mapped[str] = mapped_column(String(32), nullable=True)
     last_name: Mapped[str] = mapped_column(String(32), nullable=True)
-    password: Mapped[str] = mapped_column(String(8), nullable=False)
+    password: Mapped[str] = mapped_column(String(100), nullable=False)
 
     todos: Mapped[List["Todo"]] = relationship(back_populates="todo_owner")
 
@@ -31,4 +31,4 @@ class Todo(Base):
     )
     user_id: Mapped[int] = mapped_column(Integer(), ForeignKey("Users.id"))
 
-    todo_owner: Mapped[User] = relationship("todos")
+    todo_owner: Mapped[User] = relationship(back_populates="todos")
