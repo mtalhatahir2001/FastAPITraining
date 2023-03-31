@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from starlette import status
 
 auth_router = APIRouter(
-    prefix="/users", tags=["users"], responses={401: {"user": "Not Authenticated"}}
+    prefix="/users", tags=["users"], responses={401: {"user": "user_not_authenticated"}}
 )
 
 
@@ -91,7 +91,7 @@ async def create_new_user(
         db.commit()
     except Exception as e:
         raise HTTPException(status_code=500, detail="user_not_inserted")
-    return {"body": "new_user_created"}
+    return {"detail": "new_user_created"}
 
 
 @auth_router.post("/login", status_code=status.HTTP_200_OK)
