@@ -105,7 +105,7 @@ async def update_todo(
 
 
 @todo_router.delete("/delete_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
-async def update_todo(
+async def delete_todo(
     todo_id: int = Path(gt=-1),
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
