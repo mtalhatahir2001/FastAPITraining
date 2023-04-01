@@ -53,20 +53,21 @@ BOOKS = [
 
 
 @app.get("/books", status_code=status.HTTP_200_OK)
-async def get_all_books():
+async def get_all_books() -> list:
     return BOOKS
 
 
 @app.post("/books/create_book", status_code=status.HTTP_201_CREATED)
-async def get_all_books(book_request: BookRequest):
+async def get_all_books(book_request: BookRequest) -> dict:
     book = Book(**book_request.dict())
     book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
     BOOKS.append(book)
+    return {"detail": "new_book_created"}
 
 
 # Similarly we can also write put and delete methods
 @app.get("/books/", status_code=status.HTTP_200_OK)
-async def get_books_by_rating(rating: float = Query(gt=0, lt=6)):
+async def get_books_by_rating(rating: float = Query(gt=0, lt=6)) -> list:
     result_books = list()
     for i in BOOKS:
         if i.rating == rating:
@@ -79,7 +80,7 @@ async def get_books_by_rating(rating: float = Query(gt=0, lt=6)):
 
 # Assigment question to filter books by publish_date
 @app.get("/books/{publish_date}", status_code=status.HTTP_200_OK)
-async def get_books_by_rating(publish_date: float = Path(gt=1899, lt=3000)):
+async def get_books_by_rating(publish_date: float = Path(gt=1899, lt=3000)) -> list:
     result_books = list()
     for i in BOOKS:
         if i.publish_date == publish_date:
