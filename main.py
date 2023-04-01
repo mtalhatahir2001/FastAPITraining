@@ -10,12 +10,12 @@ BOOKS = [
 
 
 @app.get("/books")
-async def get_books():
+async def get_books() -> list[dict[str, str]]:
     return BOOKS
 
 
 @app.get("/books/{book_title}")
-async def get_book_by_name(book_title: str):
+async def get_book_by_name(book_title: str) -> dict[str, str]:
     for i in BOOKS:
         if i.get("title").lower() == book_title.lower():
             return i
@@ -23,7 +23,7 @@ async def get_book_by_name(book_title: str):
 
 
 @app.get("/books/")
-async def filter_books(category: str):
+async def filter_books(category: str) -> list[dict[str, str]]:
     filtered_list = list()
     for i in BOOKS:
         if i.get("category").lower() == category.lower():
@@ -32,7 +32,7 @@ async def filter_books(category: str):
 
 
 @app.get("/books/filter/{author}")
-async def filter_books(author: str):
+async def filter_books(author: str) -> list[dict[str, str]]:
     filtered_list = list()
     for i in BOOKS:
         if i.get("author").lower() == author.lower():
@@ -41,13 +41,13 @@ async def filter_books(author: str):
 
 
 @app.post("/books/create_book")
-async def add_new_books(new_book=Body()):
+async def add_new_books(new_book=Body()) -> dict[str, str]:
     BOOKS.append(new_book)
     return {"success": "Book added"}
 
 
 @app.put("/books/update_book")
-async def add_new_books(new_book=Body()):
+async def add_new_books(new_book=Body()) -> dict[str, str]:
     for index, i in enumerate(BOOKS):
         if i.get("title").lower() == new_book.get("title").lower():
             BOOKS[index] = new_book
@@ -56,7 +56,7 @@ async def add_new_books(new_book=Body()):
 
 
 @app.delete("/books/delete_book/{book_title}")
-async def get_book_by_name(book_title: str):
+async def get_book_by_name(book_title: str) -> dict[str, str]:
     for index, i in enumerate(BOOKS):
         if i.get("title").lower() == book_title.lower():
             del BOOKS[index]
