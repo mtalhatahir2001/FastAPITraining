@@ -84,7 +84,6 @@ async def modify_current_user(
                 db.add(user_in_db)
                 db.commit()
             except Exception as e:
-                print(e)
                 raise HTTPException(status_code=500, detail="password_not_changed")
         return {"detail": "password_changed"}
 
@@ -101,6 +100,5 @@ async def delete_current_user(
             db.query(User).filter(User.id == user.get("id")).delete()
             db.commit()
         except Exception as e:
-            print(e)
             raise HTTPException(status_code=500, detail="user_not_deleted")
         return {"detail": "user_deleted"}

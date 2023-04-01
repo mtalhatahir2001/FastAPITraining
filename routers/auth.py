@@ -62,6 +62,7 @@ class UserModel(BaseModel):
     first_name: str = Field(min_length=0, max_length=32)
     last_name: str = Field(min_length=0, max_length=32)
     password: str = Field(min_length=0, max_length=8)
+    p_number: str = Field(min_length=0, max_length=11)
 
     class Config:
         schema_extra = {
@@ -70,6 +71,7 @@ class UserModel(BaseModel):
                 "first_name": "User's first name",
                 "last_name": "User's last name",
                 "password": "Password",
+                "p_number": "Phone num",
             }
         }
 

@@ -16,6 +16,7 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(32), nullable=True)
     last_name: Mapped[str] = mapped_column(String(32), nullable=True)
     password: Mapped[str] = mapped_column(String(100), nullable=False)
+    p_number: Mapped[str] = mapped_column(String(11), nullable=True)
 
     todos: Mapped[List["Todo"]] = relationship(back_populates="todo_owner")
 

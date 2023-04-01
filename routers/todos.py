@@ -72,7 +72,6 @@ async def add_todo(
         db.add(new_todo)
         db.commit()
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail="todo_not_inserted")
     return {"detail": "new_todo_created"}
 
@@ -101,7 +100,6 @@ async def update_todo(
         db.add(result)
         db.commit()
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail="todo_not_inserted")
     return {"detail": "todo_updated"}
 
@@ -120,6 +118,5 @@ async def update_todo(
     try:
         db.commit()
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail="todo_not_deleted")
     return {"detail": "todo_deleted"}
