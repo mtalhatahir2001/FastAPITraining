@@ -74,12 +74,6 @@ class UserModel(BaseModel):
         }
 
 
-@auth_router.get("/")
-async def get_all_users(db: local_session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
-
-
 @auth_router.post("/create_new", status_code=status.HTTP_201_CREATED)
 async def create_new_user(
     new_user: UserModel, db: local_session = Depends(get_db)
