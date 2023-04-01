@@ -28,8 +28,34 @@ class TodoModel(BaseModel):
 
 
 @todo_router.get("/")
-async def get_all_todos(db: local_session = Depends(get_db)):
-    return db.query(Todo).all()
+async def get_all_todos(
+    db: local_session = Depends(get_db), user: dict = Depends(get_current_user)
+) -> list:
+    if user == None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    else:
+        todos = db.query(Todo).filter(Todo.user_id == user.get("id")).all()
+        return todos
+
+
+@todo_router.get("/{todo_id}")
+async def get_todo_by_id(
+    todo_id: int = Path(gt=-1),
+    user: dict = Depends(get_current_user),
+    db: local_session = Depends(get_db),
+) -> TodoModel:
+    if user == None:
+        raise HTTPException(status_code=404, detail="user_not_found")
+    else:
+        todo = (
+            db.query(Todo)
+            .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
+            .first()
+        )
+        if todo == None:
+            raise HTTPException(status_code=404, detail="todo_not_found")
+        result = TodoModel(**todo.__dict__)
+        return result
 
 
 @todo_router.post("/create_todo", status_code=status.HTTP_201_CREATED)
@@ -37,7 +63,7 @@ async def add_todo(
     todo: TodoModel,
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
-) -> dict:
+) -> dict[str, str]:
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     new_todo = Todo(**todo.dict())
@@ -57,7 +83,7 @@ async def update_todo(
     todo: TodoModel = None,
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
-) -> dict:
+) -> dict[str, str]:
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     result = (
@@ -85,7 +111,7 @@ async def update_todo(
     todo_id: int = Path(gt=-1),
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
-) -> dict:
+) -> dict[str, str]:
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     db.query(Todo).filter(
