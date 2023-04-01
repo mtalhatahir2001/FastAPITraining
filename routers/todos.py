@@ -27,7 +27,7 @@ class TodoModel(BaseModel):
         }
 
 
-@todo_router.get("/")
+@todo_router.get("/", status_code=status.HTTP_200_OK)
 async def get_all_todos(
     db: local_session = Depends(get_db), user: dict = Depends(get_current_user)
 ) -> list:
@@ -38,7 +38,7 @@ async def get_all_todos(
         return todos
 
 
-@todo_router.get("/{todo_id}")
+@todo_router.get("/{todo_id}", status_code=status.HTTP_200_OK)
 async def get_todo_by_id(
     todo_id: int = Path(gt=-1),
     user: dict = Depends(get_current_user),

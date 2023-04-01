@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from starlette import status
 
 auth_router = APIRouter(
-    prefix="/users", tags=["users"], responses={401: {"user": "user_not_authenticated"}}
+    prefix="/auth", tags=["Auth"], responses={401: {"user": "user_not_authenticated"}}
 )
 
 
