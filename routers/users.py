@@ -32,6 +32,14 @@ class PassInfo(BaseModel):
 
 
 def get_single_user(user_id: int, db: local_session) -> UserModel:
+    """
+    Params
+    ------
+    user_id: int = user id
+    db: Session = database object to query from.
+
+    Will query the db to find the user with given user_id and reutrn its DB Model
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
@@ -45,6 +53,9 @@ async def get_user_by_id(
     user_id: int = Query(gt=-1),
     db: local_session = Depends(get_db),
 ) -> UserModel:
+    """
+    Takes user id as Query paramter and return the user info.
+    """
     result = get_single_user(user_id, db)
     return result
 
@@ -54,12 +65,18 @@ async def get_user_by_id(
     user_id: int = Path(gt=-1),
     db: local_session = Depends(get_db),
 ) -> UserModel:
+    """
+    Takes user id as Query paramter and return the user info.
+    """
     result = get_single_user(user_id, db)
     return result
 
 
-@users_router.get("/", status_code=status.HTTP_200_OK)
-async def get_all_users(db: local_session = Depends(get_db)) -> list:
+@users_router.get("/", status_code=status.HTTP_200_OK, response_model=None)
+async def get_all_users(db: local_session = Depends(get_db)) -> list[UserModel]:
+    """
+    Returns the list of all the users in a current db session.
+    """
     users = db.query(User).all()
     return users
 
@@ -70,6 +87,11 @@ async def modify_current_user(
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> dict[str, str]:
+    """
+    This will be used to change user password.\n
+    will take old password and new password and will only change the password\n
+    if old password matches the old password in db else will through 500.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
@@ -92,6 +114,11 @@ async def modify_current_user(
 async def delete_current_user(
     user: dict = Depends(get_current_user), db: local_session = Depends(get_db)
 ) -> dict[str, str]:
+    """
+    Takes no param. Will take the user Id form JWT Token passed in header.\n
+    Will delete that user and all the todos assiciated with that user from the\n
+    DB.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
