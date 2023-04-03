@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from database_config import local_session
@@ -12,6 +13,7 @@ from starlette import status
 auth_router = APIRouter(
     prefix="/auth", tags=["Auth"], responses={401: {"user": "user_not_authenticated"}}
 )
+logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
 
 
 def get_db():
@@ -83,6 +85,7 @@ async def get_current_user(token: str = Depends(oauth_bearer)) -> dict[str, str]
         username = payload.get("username")
         return {"id": user_id, "username": username}
     except JWTError:
+        logging.error(f"invalid_token -- from {__name__}.get_current_user")
         raise HTTPException(status_code=401, detail="unauthorized_user")
 
 
@@ -116,9 +119,13 @@ async def create_new_user(
     user = User(**new_user.dict())
     user.password = generate_hash(new_user.password)
     try:
+        logging.info(
+            f"adding user{user.username} to db -- from {__name__}.create_new_user"
+        )
         db.add(user)
         db.commit()
     except Exception as e:
+        logging.exception(f"Exception")
         raise HTTPException(status_code=500, detail="user_not_inserted")
     return {"detail": "new_user_created"}
 
@@ -135,10 +142,12 @@ async def login(
     """
     user = db.query(User).filter(User.username == form_data.username).first()
     if user == None:
+        logging.error(f"invalid_user -- from {__name__}.login")
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
         if verify_pass(form_data.password, user.password):
             token = generate_token(user.id, user.username)
             return {"access_token": token}
         else:
+            logging.error(f"invlid_password -- from {__name__}.login")
             raise HTTPException(401, detail="invalid_password")

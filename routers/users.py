@@ -109,7 +109,7 @@ async def modify_current_user(
         else:
             user_in_db.password = generate_hash(user_info.new_password)
             try:
-                logging.info("adding user to db... -- from modify_current_user")
+                logging.info("updating user in db... -- from modify_current_user")
                 db.add(user_in_db)
                 db.commit()
             except Exception as e:
