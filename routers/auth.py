@@ -15,6 +15,9 @@ auth_router = APIRouter(
 
 
 def get_db():
+    """
+    Calling this generator function will yield the DB object that can directly be used to query database.
+    """
     try:
         db = local_session()
         yield db
@@ -22,6 +25,8 @@ def get_db():
         db.close()
 
 
+# CryptContext the object of the scheme passed i.e bcrypt that can be used
+# to hash passward before add them to db
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth_bearer = OAuth2PasswordBearer(tokenUrl="/login")
 
@@ -30,14 +35,34 @@ ALGO = "HS256"
 
 
 def generate_hash(password: str) -> str:
+    """
+    Will use the bcrypt to return the hashed version of the string passed.\n
+    Param
+    ------
+    password: str = string to hash
+    """
     return bcrypt_context.hash(password)
 
 
 def verify_pass(password: str, hash_pass: str) -> bool:
+    """
+    Will use the bcrypt to verify if hashed version matches the string passed.\n
+    Param
+    ------
+    password: str = orginal string
+    hash_pass: str = hash password to match with
+    """
     return bcrypt_context.verify(password, hash_pass)
 
 
 def generate_token(user_id: int, username: str) -> str:
+    """
+    Returns the JWT token with params added as payload and expire time of 30 mins\n
+    Params
+    --------
+    user_id: int
+    username: str
+    """
     expire_time = datetime.now() + timedelta(minutes=30)
     token = jwt.encode(
         {"user_id": user_id, "username": username, "exp": expire_time},
@@ -48,6 +73,10 @@ def generate_token(user_id: int, username: str) -> str:
 
 
 async def get_current_user(token: str = Depends(oauth_bearer)) -> dict[str, str]:
+    """
+    Read the token through dependency injection and returns the payload.\n
+    Will raise 401 if JWT Token is not verified.
+    """
     try:
         payload = jwt.decode(token=token, key=SECRET_KEY, algorithms=ALGO)
         user_id = payload.get("user_id")
@@ -79,7 +108,11 @@ class UserModel(BaseModel):
 @auth_router.post("/create_new", status_code=status.HTTP_201_CREATED)
 async def create_new_user(
     new_user: UserModel, db: local_session = Depends(get_db)
-) -> dict:
+) -> dict[str, str]:
+    """
+    Reads the user json object passed as pydantic object.\n
+    and inserts that to DB
+    """
     user = User(**new_user.dict())
     user.password = generate_hash(new_user.password)
     try:
@@ -94,7 +127,12 @@ async def create_new_user(
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: local_session = Depends(get_db),
-) -> dict:
+) -> dict[str, str]:
+    """
+    Read the form data into OAuth2PasswordRequestForm that\n
+    expects the user to submit the form having username and password fields.\n
+    returns the token if login creds match else raise 401
+    """
     user = db.query(User).filter(User.username == form_data.username).first()
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
