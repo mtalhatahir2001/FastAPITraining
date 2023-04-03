@@ -100,6 +100,8 @@ async def get_books_by_rating(rating: float = Query(gt=0, lt=6)) -> list[Book]:
 
 # Assigment question to filter books by publish_date
 @app.get("/books/{publish_date}", status_code=status.HTTP_200_OK, response_model=None)
+#                                                                   \-------> This response_model allows model other then pydantic to
+#                                                                       added into type hints.
 async def get_books_by_rating(
     publish_date: float = Path(gt=1899, lt=3000)
 ) -> list[Book]:
