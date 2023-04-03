@@ -27,10 +27,14 @@ class TodoModel(BaseModel):
         }
 
 
-@todo_router.get("/", status_code=status.HTTP_200_OK)
+@todo_router.get("/", status_code=status.HTTP_200_OK, response_model=None)
 async def get_all_todos(
     db: local_session = Depends(get_db), user: dict = Depends(get_current_user)
-) -> list:
+) -> list[Todo]:
+    """
+    Querys the Db and returns all the available todos for the current logged in user\n
+    Requires the the token to be passed in header.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
@@ -44,6 +48,10 @@ async def get_todo_by_id(
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> TodoModel:
+    """
+    Querys the Db and returns all the available todos having id passed as path param for the current logged in user\n
+    Requires the the token to be passed in header.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
@@ -64,6 +72,10 @@ async def add_todo(
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> dict[str, str]:
+    """
+    Requires the todo modal to be passed as post body as json and adds it to the db for the current user.\n
+    Requires the the token to be passed in header.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     new_todo = Todo(**todo.dict())
@@ -83,6 +95,10 @@ async def update_todo(
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> dict[str, str]:
+    """
+    Takes todo id as path param and Todo json as body and updates the todo in the db with id passed as param.\n
+    Requires the the token to be passed in header.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     result = (
@@ -110,6 +126,10 @@ async def delete_todo(
     user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> dict[str, str]:
+    """
+    Takes todo id as path param deletes the todo in the db with id passed as param.\n
+    Requires the the token to be passed in header.
+    """
     if user == None:
         raise HTTPException(status_code=404, detail="user_not_found")
     db.query(Todo).filter(
