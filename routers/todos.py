@@ -1,5 +1,7 @@
 from database_config import local_session
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from models import Todo
 from pydantic import BaseModel, Field
 from sqlalchemy import and_
@@ -10,6 +12,8 @@ from .auth import get_current_user, get_db
 todo_router = APIRouter(
     prefix="/todos", tags=["Todos"], responses={401: {"user": "user_not_authenticated"}}
 )
+
+templates = Jinja2Templates(directory="templates")
 
 
 class TodoModel(BaseModel):
@@ -25,6 +29,11 @@ class TodoModel(BaseModel):
                 "priority": 3,
             }
         }
+
+
+@todo_router.get("/home_page", status_code=status.HTTP_200_OK)
+async def get_home_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("home.html", {"request": request})
 
 
 @todo_router.get("/", status_code=status.HTTP_200_OK)
