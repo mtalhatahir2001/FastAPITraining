@@ -52,13 +52,24 @@ BOOKS = [
 ]
 
 
-@app.get("/books", status_code=status.HTTP_200_OK)
-async def get_all_books() -> list:
+@app.get("/books", status_code=status.HTTP_200_OK, response_model=None)
+#                                                  \-------> This response_model allows model other then pydantic to
+#                                                               added into type hints.
+async def get_all_books() -> list[Book]:
+    """
+    This simply return the list of Book model.
+    """
     return BOOKS
 
 
 @app.post("/books/create_book", status_code=status.HTTP_201_CREATED)
 async def get_all_books(book_request: BookRequest) -> dict:
+    """
+    Takes dict representing the book as json in body and adds it to the book list\n
+    Body Structure
+    --------------
+    {"title": "Physic", "author":"Talha", "description":"Applied Physics", "rating":4, "publish_date":2014}
+    """
     book = Book(**book_request.dict())
     book.id = 1 if len(BOOKS) == 0 else BOOKS[len(BOOKS) - 1].id + 1
     BOOKS.append(book)
@@ -66,8 +77,17 @@ async def get_all_books(book_request: BookRequest) -> dict:
 
 
 # Similarly we can also write put and delete methods
-@app.get("/books/", status_code=status.HTTP_200_OK)
-async def get_books_by_rating(rating: float = Query(gt=0, lt=6)) -> list:
+@app.get("/books/", status_code=status.HTTP_200_OK, response_model=None)
+#                                                       \-------> This response_model allows model other then pydantic to
+#                                                               added into type hints.
+async def get_books_by_rating(rating: float = Query(gt=0, lt=6)) -> list[Book]:
+    """
+    Queries the books list to return the books having the required rating.\n
+    Query Params
+    ------------
+    raing: float (0 - 6)
+    Will raise 404 if no record found
+    """
     result_books = list()
     for i in BOOKS:
         if i.rating == rating:
@@ -79,8 +99,17 @@ async def get_books_by_rating(rating: float = Query(gt=0, lt=6)) -> list:
 
 
 # Assigment question to filter books by publish_date
-@app.get("/books/{publish_date}", status_code=status.HTTP_200_OK)
-async def get_books_by_rating(publish_date: float = Path(gt=1899, lt=3000)) -> list:
+@app.get("/books/{publish_date}", status_code=status.HTTP_200_OK, response_model=None)
+async def get_books_by_rating(
+    publish_date: float = Path(gt=1899, lt=3000)
+) -> list[Book]:
+    """
+    Queries the books list to return the books having the required publish_date.\n
+    Path Params
+    ------------
+    publish_date: float (1899 - 3000)
+    Will raise 404 if no record found
+    """
     result_books = list()
     for i in BOOKS:
         if i.publish_date == publish_date:
