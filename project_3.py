@@ -10,8 +10,9 @@ from routers.users import users_router
 app = FastAPI()
 
 
-Base.metadata.create_all(engine)
 logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
+logging.info(f"initializing Db... --from {__name__}")
+Base.metadata.create_all(engine)
 
 
 app.include_router(auth_router)
