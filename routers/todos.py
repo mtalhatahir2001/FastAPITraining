@@ -33,7 +33,7 @@ class TodoModel(BaseModel):
 
 @todo_router.get("/home_page", status_code=status.HTTP_200_OK)
 async def get_home_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("home.html", {"request": request})
+    return templates.TemplateResponse("edit-todo.html", {"request": request})
 
 
 @todo_router.get("/", status_code=status.HTTP_200_OK)
