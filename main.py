@@ -50,6 +50,8 @@ async def filter_books(category: str) -> list[dict[str, str]]:
     return filtered_list
 
 
+# This route is made as part of the assignment whoses statement is stated below
+# "Create a route to get books by author name either using query parameter or path parameter.""
 @app.get("/books/filter/{author}")
 async def filter_books(author: str) -> list[dict[str, str]]:
     """
