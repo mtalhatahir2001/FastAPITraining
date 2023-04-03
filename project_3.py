@@ -1,3 +1,5 @@
+import logging
+
 from database_config import engine
 from fastapi import FastAPI
 from models import Base
@@ -9,6 +11,7 @@ app = FastAPI()
 
 
 Base.metadata.create_all(engine)
+logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
 
 
 app.include_router(auth_router)

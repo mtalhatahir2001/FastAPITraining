@@ -2,6 +2,7 @@
 This is the part of Section 15 assignment.\n
 ------------------------------------------
 """
+import logging
 
 from database_config import local_session
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -16,6 +17,7 @@ users_router = APIRouter(
     tags=["Users (Assignment)"],
     responses={401: {"user": "user_not_authenticated"}},
 )
+logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
 
 
 class PassInfo(BaseModel):
@@ -42,6 +44,7 @@ def get_single_user(user_id: int, db: local_session) -> UserModel:
     """
     user = db.query(User).filter(User.id == user_id).first()
     if user == None:
+        logging.error("no_user_in_db from get_single_user")
         raise HTTPException(status_code=404, detail="user_not_found")
     user.password = "***"
     result = UserModel(**user.__dict__)
@@ -97,15 +100,20 @@ async def modify_current_user(
     else:
         user_in_db = db.query(User).filter(User.id == user.get("id")).first()
         if not verify_pass(user_info.old_password, user_in_db.password):
+            logging.error(
+                "old_pass not equal to current_pass -- from modify_current_user"
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="old_pass_incorrect"
             )
         else:
             user_in_db.password = generate_hash(user_info.new_password)
             try:
+                logging.info("adding user to db... -- from modify_current_user")
                 db.add(user_in_db)
                 db.commit()
             except Exception as e:
+                logging.exception("Exception occured")
                 raise HTTPException(status_code=500, detail="password_not_changed")
         return {"detail": "password_changed"}
 
@@ -120,12 +128,15 @@ async def delete_current_user(
     DB.
     """
     if user == None:
+        logging.error("invalid_token -- from delete_current_user")
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
         try:
+            logging.info(f"deleting user{user.get('id')}.. -- from delete_current_user")
             db.query(Todo).filter(Todo.user_id == user.get("id")).delete()
             db.query(User).filter(User.id == user.get("id")).delete()
             db.commit()
         except Exception as e:
+            logging.exception("Exception occured")
             raise HTTPException(status_code=500, detail="user_not_deleted")
         return {"detail": "user_deleted"}
