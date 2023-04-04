@@ -27,7 +27,8 @@
       <td>{{i.id}}</td>
       <td id="td1">{{i.title}}</td>
       <td> 
-        <button type="button" class="btn btn-danger" onclick="()=>window.location.replace('/todos/delete_todo/{{i.id}}')">Delete</button> 
+        <button type="button" class="btn btn-danger" onclick="window.location.href = '/todos/delete_todo/{{i.id}}'">Delete</button> 
+        <button type="button" class="btn btn-primary" onclick="window.location.href = '/todos/edit_todo/{{i.id}}'">Edit</button>
       </td>
     </tr>
     {% endfor %}

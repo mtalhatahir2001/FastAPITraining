@@ -1,7 +1,8 @@
 import logging
 
+from const import ERRORS
 from database_config import local_session
-from fastapi import APIRouter, Depends, HTTPException, Path, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from models import Todo
@@ -45,13 +46,35 @@ async def get_home_page(
     user = await get_current_user(request)
     todos = db.query(Todo).filter(Todo.user_id == user.get("id")).all()
     if user == None:
+        logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.get_home_page")
         return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
     return templates.TemplateResponse("home.html", {"request": request, "todos": todos})
 
 
-@todo_router.get("/edit_todo", status_code=status.HTTP_200_OK)
-async def get_edit_todo_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("edit-todo.html", {"request": request})
+@todo_router.get(
+    "/edit_todo/{todo_id}", status_code=status.HTTP_200_OK, response_model=None
+)
+async def get_edit_todo_page(
+    request: Request, todo_id: int = Path(gt=-1), db: local_session = Depends(get_db)
+) -> HTMLResponse | RedirectResponse:
+    """
+    Verifys the user from access_token in cookies then return edit.html if token valid else\n
+    redirect to login.
+    """
+    user = await get_current_user(request)
+    if user == None:
+        logging.error(
+            f"{ERRORS['invalid_token']} -- from {__name__}.get_edit_todo_page"
+        )
+        return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    todo = (
+        db.query(Todo)
+        .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
+        .first()
+    )
+    return templates.TemplateResponse(
+        "edit-todo.html", {"request": request, "todo": todo}
+    )
 
 
 @todo_router.get("/add_todo", status_code=status.HTTP_200_OK)
@@ -86,40 +109,46 @@ async def get_add_todo_page(request: Request) -> HTMLResponse:
 #     return {"detail": "new_todo_created"}
 
 
-# @todo_router.put("/update_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
-# async def update_todo(
-#     todo_id: int = Path(gt=-1),
-#     todo: TodoModel = None,
-#     user: dict = Depends(get_current_user),
-#     db: local_session = Depends(get_db),
-# ) -> dict[str, str]:
-#     """
-#     Takes todo id as path param and Todo json as body and updates the todo in the db with id passed as param.\n
-#     Requires the the token to be passed in header.
-#     """
-#     if user == None:
-#         logging.error(f"invalid_token -- from {__name__}.update_todo")
-#         raise HTTPException(status_code=404, detail="user_not_found")
-#     result = (
-#         db.query(Todo)
-#         .filter(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
-#         .first()
-#     )
-#     if result == None:
-#         logging.error(f"invalid_todo -- from {__name__}.update_todo")
-#         raise HTTPException(status_code=404, detail="todo_not_found")
-#     else:
-#         result.title = todo.title
-#         result.discription = todo.discription
-#         result.priority = todo.priority
-#     try:
-#         logging.info(f"updating todo{result.id} -- from {__name__}.update_todo")
-#         db.add(result)
-#         db.commit()
-#     except Exception as e:
-#         logging.exception(f"Exceptions")
-#         raise HTTPException(status_code=500, detail="todo_not_inserted")
-#     return {"detail": "todo_updated"}
+@todo_router.post(
+    "/edit_todo/{todo_id}", status_code=status.HTTP_201_CREATED, response_model=None
+)
+async def update_todo(
+    request: Request,
+    todo_id: int = Path(gt=-1),
+    todo_title: str = Form(...),
+    todo_description: str = Form(...),
+    todo_priority: int = Form(...),
+    user: dict = Depends(get_current_user),
+    db: local_session = Depends(get_db),
+) -> RedirectResponse | HTTPException:
+    """
+    Takes todo id as path param and updated todo as form body and updates the todo in the db with id passed as param.\n
+    Requires the the token to be passed in as cookie.
+    """
+    user = await get_current_user(request)
+    if user == None:
+        logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.update_todo")
+        return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    result = (
+        db.query(Todo)
+        .filter(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        .first()
+    )
+    if result == None:
+        logging.error(f"{ERRORS['invalid_todo']} -- from {__name__}.update_todo")
+        return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
+    else:
+        result.title = todo_title
+        result.discription = todo_description
+        result.priority = todo_priority
+    try:
+        logging.info(f"Updating todo {result.id} -- from {__name__}.update_todo")
+        db.add(result)
+        db.commit()
+    except Exception as e:
+        logging.exception(f"Exceptions")
+        return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # @todo_router.delete("/delete_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
