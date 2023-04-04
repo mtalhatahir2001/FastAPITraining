@@ -118,7 +118,6 @@ async def update_todo(
     todo_title: str = Form(...),
     todo_description: str = Form(...),
     todo_priority: int = Form(...),
-    user: dict = Depends(get_current_user),
     db: local_session = Depends(get_db),
 ) -> RedirectResponse | HTTPException:
     """
@@ -151,26 +150,29 @@ async def update_todo(
     return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# @todo_router.delete("/delete_todo/{todo_id}", status_code=status.HTTP_201_CREATED)
-# async def delete_todo(
-#     todo_id: int = Path(gt=-1),
-#     user: dict = Depends(get_current_user),
-#     db: local_session = Depends(get_db),
-# ) -> dict[str, str]:
-#     """
-#     Takes todo id as path param deletes the todo in the db with id passed as param.\n
-#     Requires the the token to be passed in header.
-#     """
-#     if user == None:
-#         logging.error(f"invalid_token -- from {__name__}.delete_todo")
-#         raise HTTPException(status_code=404, detail="user_not_found")
-#     db.query(Todo).filter(
-#         and_(Todo.id == todo_id, Todo.user_id == user.get("id"))
-#     ).delete()
-#     try:
-#         logging.info(f"deleting todo{todo_id} -- from {__name__}.delete_todo")
-#         db.commit()
-#     except Exception as e:
-#         logging.exception("Exception")
-#         raise HTTPException(status_code=500, detail="todo_not_deleted")
-#     return {"detail": "todo_deleted"}
+@todo_router.get(
+    "/delete_todo/{todo_id}", status_code=status.HTTP_201_CREATED, response_model=None
+)
+async def delete_todo(
+    request: Request,
+    todo_id: int = Path(gt=-1),
+    db: local_session = Depends(get_db),
+) -> RedirectResponse | HTMLResponse:
+    """
+    Takes todo id as path param deletes the todo in the db with id passed as param.\n
+    Requires the the token to be passed in cookie.
+    """
+    user = await get_current_user(request)
+    if user == None:
+        logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.delete_todo")
+        return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    db.query(Todo).filter(
+        and_(Todo.id == todo_id, Todo.user_id == user.get("id"))
+    ).delete()
+    try:
+        logging.info(f"Deleting todo {todo_id} -- from {__name__}.delete_todo")
+        db.commit()
+    except Exception as e:
+        logging.exception("Exception")
+        return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
