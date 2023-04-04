@@ -1,9 +1,12 @@
 import logging
 from datetime import datetime, timedelta
 
+from const import ERRORS
 from database_config import local_session
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from models import User
 from passlib.context import CryptContext
@@ -14,6 +17,8 @@ auth_router = APIRouter(
     prefix="/auth", tags=["Auth"], responses={401: {"user": "user_not_authenticated"}}
 )
 logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
+
+templates = Jinja2Templates(directory="templates")
 
 
 def get_db():
@@ -74,19 +79,22 @@ def generate_token(user_id: int, username: str) -> str:
     return token
 
 
-async def get_current_user(token: str = Depends(oauth_bearer)) -> dict[str, str]:
+async def get_current_user(request: Request) -> dict[str, str] | None:
     """
-    Read the token through dependency injection and returns the payload.\n
-    Will raise 401 if JWT Token is not verified.
+    Will read the token through fastapi.Request and returns the payload.\n
+    Will return None if JWTError is raised.
     """
     try:
+        token = request.cookies.get("access_token")
+        if token == None:
+            raise JWTError
         payload = jwt.decode(token=token, key=SECRET_KEY, algorithms=ALGO)
         user_id = payload.get("user_id")
         username = payload.get("username")
         return {"id": user_id, "username": username}
     except JWTError:
-        logging.error(f"invalid_token -- from {__name__}.get_current_user")
-        raise HTTPException(status_code=401, detail="unauthorized_user")
+        logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.get_current_user")
+        return None
 
 
 class UserModel(BaseModel):
@@ -108,46 +116,99 @@ class UserModel(BaseModel):
         }
 
 
-@auth_router.post("/create_new", status_code=status.HTTP_201_CREATED)
-async def create_new_user(
-    new_user: UserModel, db: local_session = Depends(get_db)
-) -> dict[str, str]:
+@auth_router.get("/login", status_code=status.HTTP_200_OK)
+async def get_login_page(request: Request) -> HTMLResponse:
     """
-    Reads the user json object passed as pydantic object.\n
-    and inserts that to DB
+    Displays the login page.
     """
-    user = User(**new_user.dict())
-    user.password = generate_hash(new_user.password)
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@auth_router.get("/logout", status_code=status.HTTP_200_OK)
+async def get_login_page(request: Request) -> HTMLResponse:
+    """
+    Removes the cookies and displays the login page.
+    """
+    response = templates.TemplateResponse("login.html", {"request": request})
+    response.delete_cookie("access_token")
+    return response
+
+
+@auth_router.get("/register", status_code=status.HTTP_200_OK)
+async def get_register_page(request: Request) -> HTMLResponse:
+    """
+    Displays the Register page.
+    """
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@auth_router.post("/register", status_code=status.HTTP_303_SEE_OTHER)
+async def get_register_page(
+    request: Request,
+    p_number: str = Form(...),
+    username: str = Form(...),
+    firstname: str = Form(...),
+    lastname: str = Form(...),
+    password: str = Form(...),
+    db: local_session = Depends(get_db),
+) -> RedirectResponse:
+    """
+    Reads the user data from Form object submited as post request.\n
+    and inserts that to DB\n
+    Response
+    --------
+    Redirect to auth/login
+    """
+    user = User(
+        username=username,
+        first_name=firstname,
+        last_name=lastname,
+        p_number=p_number,
+        password=generate_hash(password),
+    )
     try:
         logging.info(
-            f"adding user{user.username} to db -- from {__name__}.create_new_user"
+            f"Adding user {user.username} to database -- from {__name__}.get_register_page"
         )
         db.add(user)
         db.commit()
     except Exception as e:
         logging.exception(f"Exception")
-        raise HTTPException(status_code=500, detail="user_not_inserted")
-    return {"detail": "new_user_created"}
+        return templates.TemplateResponse(
+            "register.html", {"request": request, "error": ERRORS["user_not_inserted"]}
+        )
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@auth_router.post("/login", status_code=status.HTTP_200_OK)
+@auth_router.post("/login", status_code=status.HTTP_200_OK, response_model=None)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: local_session = Depends(get_db),
-) -> dict[str, str]:
+) -> RedirectResponse | HTMLResponse:
     """
     Read the form data into OAuth2PasswordRequestForm that\n
     expects the user to submit the form having username and password fields.\n
-    returns the token if login creds match else raise 401
+    Response
+    --------
+    Redirect to /todos/home with the access_token as cookie.
     """
     user = db.query(User).filter(User.username == form_data.username).first()
     if user == None:
-        logging.error(f"invalid_user -- from {__name__}.login")
-        raise HTTPException(status_code=404, detail="user_not_found")
+        logging.error(f"{ERRORS['invalid_username']} -- from {__name__}.login")
+        return templates.TemplateResponse(
+            "login.html", {"request": request, "error": ERRORS["invalid_username"]}
+        )
     else:
         if verify_pass(form_data.password, user.password):
             token = generate_token(user.id, user.username)
-            return {"access_token": token}
+            response = RedirectResponse(
+                url="/todos/home", status_code=status.HTTP_303_SEE_OTHER
+            )
+            response.set_cookie(key="access_token", value=token, httponly=True)
+            return response
         else:
-            logging.error(f"invlid_password -- from {__name__}.login")
-            raise HTTPException(401, detail="invalid_password")
+            logging.error(f"{ERRORS['invalid_password']} -- from {__name__}.login")
+            return templates.TemplateResponse(
+                "login.html", {"request": request, "error": ERRORS["invalid_password"]}
+            )

@@ -13,6 +13,8 @@ passlib = {extras = ["bcrypt"], version = "*"}
 python-jose = {extras = ["cryptography"], version = "*"}
 python-multipart = "==0.0.6"
 alembic = "==1.10.2"
+aiofiles = "*"
+jinja2 = "*"
 
 [dev-packages]
 

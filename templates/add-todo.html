@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            Make a new todo
+        </div>
+        <div class="card-body">
+            <form method="post" accept="/todos/add_todo">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" class="form-control" name="todo_title"
+                           required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control"rows="3" name="todo_description"
+                              required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select class="form-control" name="todo_priority">
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                        <option>4</option>
+                        <option>5</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add new todo</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
