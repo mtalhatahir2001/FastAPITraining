@@ -124,6 +124,16 @@ async def get_login_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("login.html", {"request": request})
 
 
+@auth_router.get("/logout", status_code=status.HTTP_200_OK)
+async def get_login_page(request: Request) -> HTMLResponse:
+    """
+    Removes the cookies and displays the login page.
+    """
+    response = templates.TemplateResponse("login.html", {"request": request})
+    response.delete_cookie("access_token")
+    return response
+
+
 @auth_router.get("/register", status_code=status.HTTP_200_OK)
 async def get_register_page(request: Request) -> HTMLResponse:
     """
