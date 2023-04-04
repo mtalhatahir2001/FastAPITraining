@@ -2,8 +2,10 @@ import logging
 from datetime import datetime, timedelta
 
 from database_config import local_session
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from models import User
 from passlib.context import CryptContext
@@ -14,6 +16,8 @@ auth_router = APIRouter(
     prefix="/auth", tags=["Auth"], responses={401: {"user": "user_not_authenticated"}}
 )
 logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
+
+templates = Jinja2Templates(directory="templates")
 
 
 def get_db():
@@ -108,46 +112,73 @@ class UserModel(BaseModel):
         }
 
 
-@auth_router.post("/create_new", status_code=status.HTTP_201_CREATED)
-async def create_new_user(
-    new_user: UserModel, db: local_session = Depends(get_db)
-) -> dict[str, str]:
+@auth_router.get("/login", status_code=status.HTTP_200_OK)
+async def get_login_page(request: Request) -> HTMLResponse:
     """
-    Reads the user json object passed as pydantic object.\n
+    Displays the login page
+    """
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@auth_router.get("/register", status_code=status.HTTP_200_OK)
+async def get_register_page(request: Request) -> HTMLResponse:
+    """
+    Displays the Register page
+    """
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@auth_router.post("/register", status_code=status.HTTP_303_SEE_OTHER)
+async def get_register_page(
+    request: Request,
+    p_number: str = Form(...),
+    username: str = Form(...),
+    firstname: str = Form(...),
+    lastname: str = Form(...),
+    password: str = Form(...),
+    db: local_session = Depends(get_db),
+) -> RedirectResponse:
+    """
+    Reads the user data from Form object submited as post request.\n
     and inserts that to DB
     """
-    user = User(**new_user.dict())
-    user.password = generate_hash(new_user.password)
+    user = User(
+        username=username,
+        first_name=firstname,
+        last_name=lastname,
+        p_number=p_number,
+        password=generate_hash(password),
+    )
     try:
         logging.info(
-            f"adding user{user.username} to db -- from {__name__}.create_new_user"
+            f"adding user{user.username} to db -- from {__name__}.get_register_page"
         )
         db.add(user)
         db.commit()
     except Exception as e:
         logging.exception(f"Exception")
         raise HTTPException(status_code=500, detail="user_not_inserted")
-    return {"detail": "new_user_created"}
+    return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@auth_router.post("/login", status_code=status.HTTP_200_OK)
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: local_session = Depends(get_db),
-) -> dict[str, str]:
-    """
-    Read the form data into OAuth2PasswordRequestForm that\n
-    expects the user to submit the form having username and password fields.\n
-    returns the token if login creds match else raise 401
-    """
-    user = db.query(User).filter(User.username == form_data.username).first()
-    if user == None:
-        logging.error(f"invalid_user -- from {__name__}.login")
-        raise HTTPException(status_code=404, detail="user_not_found")
-    else:
-        if verify_pass(form_data.password, user.password):
-            token = generate_token(user.id, user.username)
-            return {"access_token": token}
-        else:
-            logging.error(f"invlid_password -- from {__name__}.login")
-            raise HTTPException(401, detail="invalid_password")
+# @auth_router.post("/login", status_code=status.HTTP_200_OK)
+# async def login(
+#     form_data: OAuth2PasswordRequestForm = Depends(),
+#     db: local_session = Depends(get_db),
+# ) -> dict[str, str]:
+#     """
+#     Read the form data into OAuth2PasswordRequestForm that\n
+#     expects the user to submit the form having username and password fields.\n
+#     returns the token if login creds match else raise 401
+#     """
+#     user = db.query(User).filter(User.username == form_data.username).first()
+#     if user == None:
+#         logging.error(f"invalid_user -- from {__name__}.login")
+#         raise HTTPException(status_code=404, detail="user_not_found")
+#     else:
+#         if verify_pass(form_data.password, user.password):
+#             token = generate_token(user.id, user.username)
+#             return {"access_token": token}
+#         else:
+#             logging.error(f"invlid_password -- from {__name__}.login")
+#             raise HTTPException(401, detail="invalid_password")

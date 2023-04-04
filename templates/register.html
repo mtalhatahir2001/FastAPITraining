@@ -21,7 +21,7 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Home </a>
+                    <a class="nav-link" href="/auth/login">Home </a>
                 </li>
             </ul>
         </div>
@@ -34,11 +34,11 @@
             Register
         </div>
         <div class="card-body">
-            <form>
+            <form method="post" action="/auth/register">
                 <div class="form-row">
                     <div class="form-group col-md-6">
-                        <label>Email</label>
-                        <input type="email" class="form-control" name="email">
+                        <label>Phone Number</label>
+                        <input type="text" class="form-control" name="p_number">
                     </div>
                     <div class="form-group col-md-6">
                         <label>Username</label>
@@ -62,18 +62,11 @@
                            name="password" required>
                 </div>
 
-                <div class="form-group">
-                    <label>Verify Password</label>
-                    <input type="password" class="form-control"
-                           name="password2" required>
-                </div>
-
-
                 <button type="submit" class="btn btn-primary">Sign in</button>
             </form>
         </div>
         <div class="card-footer text-muted">
-            <a href="#"> Already have an account? </a>
+            <a href="/auth/login"> Already have an account? </a>
         </div>
     </div>
 </div>
