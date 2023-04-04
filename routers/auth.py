@@ -79,12 +79,15 @@ def generate_token(user_id: int, username: str) -> str:
     return token
 
 
-async def get_current_user(token: str = Depends(oauth_bearer)) -> dict[str, str] | None:
+async def get_current_user(request: Request) -> dict[str, str] | None:
     """
-    Read the token through dependency injection and returns the payload.\n
-    Will raise 401 if JWT Token is not verified.
+    Will read the token through fastapi.Request and returns the payload.\n
+    Will return None if JWTError is raised.
     """
     try:
+        token = request.cookies.get("access_token")
+        if token == None:
+            raise JWTError
         payload = jwt.decode(token=token, key=SECRET_KEY, algorithms=ALGO)
         user_id = payload.get("user_id")
         username = payload.get("username")

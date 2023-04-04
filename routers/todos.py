@@ -2,7 +2,7 @@ import logging
 
 from database_config import local_session
 from fastapi import APIRouter, Depends, HTTPException, Path, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from models import Todo
 from pydantic import BaseModel, Field
@@ -34,9 +34,19 @@ class TodoModel(BaseModel):
         }
 
 
-@todo_router.get("/home", status_code=status.HTTP_200_OK)
-async def get_home_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("home.html", {"request": request})
+@todo_router.get("/home", status_code=status.HTTP_200_OK, response_model=None)
+async def get_home_page(
+    request: Request, db: local_session = Depends(get_db)
+) -> RedirectResponse | HTMLResponse:
+    """
+    Verifys the user from access_token in cookies then return Home.html if token valid else\n
+    redirect to login.
+    """
+    user = await get_current_user(request)
+    todos = db.query(Todo).filter(Todo.user_id == user.get("id")).all()
+    if user == None:
+        return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
+    return templates.TemplateResponse("home.html", {"request": request, "todos": todos})
 
 
 @todo_router.get("/edit_todo", status_code=status.HTTP_200_OK)
