@@ -161,24 +161,30 @@ async def get_register_page(
     return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# @auth_router.post("/login", status_code=status.HTTP_200_OK)
-# async def login(
-#     form_data: OAuth2PasswordRequestForm = Depends(),
-#     db: local_session = Depends(get_db),
-# ) -> dict[str, str]:
-#     """
-#     Read the form data into OAuth2PasswordRequestForm that\n
-#     expects the user to submit the form having username and password fields.\n
-#     returns the token if login creds match else raise 401
-#     """
-#     user = db.query(User).filter(User.username == form_data.username).first()
-#     if user == None:
-#         logging.error(f"invalid_user -- from {__name__}.login")
-#         raise HTTPException(status_code=404, detail="user_not_found")
-#     else:
-#         if verify_pass(form_data.password, user.password):
-#             token = generate_token(user.id, user.username)
-#             return {"access_token": token}
-#         else:
-#             logging.error(f"invlid_password -- from {__name__}.login")
-#             raise HTTPException(401, detail="invalid_password")
+@auth_router.post("/login", status_code=status.HTTP_200_OK)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: local_session = Depends(get_db),
+) -> RedirectResponse:
+    """
+    Read the form data into OAuth2PasswordRequestForm that\n
+    expects the user to submit the form having username and password fields.\n
+    returns the token if login creds match else raise 401
+    """
+    user = db.query(User).filter(User.username == form_data.username).first()
+    if user == None:
+        logging.error(f"invalid_user -- from {__name__}.login")
+        raise HTTPException(status_code=404, detail="user_not_found")
+    else:
+        if verify_pass(form_data.password, user.password):
+            token = generate_token(user.id, user.username)
+            response = RedirectResponse(
+                url="/todos/home", status_code=status.HTTP_303_SEE_OTHER
+            )
+            response.set_cookie(
+                key="access_token", value=f"Bearer {token}", httponly=True
+            )
+            return response
+        else:
+            logging.error(f"invlid_password -- from {__name__}.login")
+            raise HTTPException(401, detail="invalid_password")
