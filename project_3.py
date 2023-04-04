@@ -1,3 +1,5 @@
+import logging
+
 from database_config import engine
 from fastapi import FastAPI
 from models import Base
@@ -9,6 +11,8 @@ from starlette.staticfiles import StaticFiles
 app = FastAPI()
 
 
+logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
+logging.info(f"initializing Db... --from {__name__}")
 Base.metadata.create_all(engine)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
