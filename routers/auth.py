@@ -180,7 +180,7 @@ async def get_register_page(
     return RedirectResponse(url="/auth/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@auth_router.post("/login", status_code=status.HTTP_200_OK, response_model=None)
+@auth_router.post("/login", status_code=status.HTTP_303_SEE_OTHER, response_model=None)
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -197,7 +197,9 @@ async def login(
     if user == None:
         logging.error(f"{ERRORS['invalid_username']} -- from {__name__}.login")
         return templates.TemplateResponse(
-            "login.html", {"request": request, "error": ERRORS["invalid_username"]}
+            "login.html",
+            {"request": request, "error": ERRORS["invalid_username"]},
+            status_code=status.HTTP_404_NOT_FOUND,
         )
     else:
         if verify_pass(form_data.password, user.password):
@@ -210,5 +212,7 @@ async def login(
         else:
             logging.error(f"{ERRORS['invalid_password']} -- from {__name__}.login")
             return templates.TemplateResponse(
-                "login.html", {"request": request, "error": ERRORS["invalid_password"]}
+                "login.html",
+                {"request": request, "error": ERRORS["invalid_password"]},
+                status_code=status.HTTP_404_NOT_FOUND,
             )

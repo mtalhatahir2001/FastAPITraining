@@ -8,14 +8,13 @@ client = TestClient(app=app)
 def test_create_new_user():
     user = {
         "username": "test_t",
-        "first_name": "Talha",
-        "last_name": "Tahir",
+        "firstname": "Talha",
+        "lastname": "Tahir",
         "password": "talha123",
         "p_number": "30396+++++",
     }
-    response = client.post("/auth/create_new", json=user)
-    assert response.status_code == status.HTTP_201_CREATED
-    assert response.json() == {"detail": "new_user_created"}
+    response = client.post("/auth/register", data=user)
+    assert response.status_code == status.HTTP_200_OK
 
     # if username or password is missing in request
     user = {
@@ -23,7 +22,7 @@ def test_create_new_user():
         "last_name": "Tahir",
         "p_number": "30396+++++",
     }
-    response = client.post("/auth/create_new", json=user)
+    response = client.post("/auth/register", data=user)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -34,7 +33,6 @@ def test_login():
     }
     response = client.post("/auth/login", data=user_creds)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json().get("access_token") != None
 
     # if username is wrong
     user_creds = {
@@ -43,7 +41,6 @@ def test_login():
     }
     response = client.post("/auth/login", data=user_creds)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("access_token") == None
 
     # if password is wrong
     user_creds = {
@@ -52,4 +49,3 @@ def test_login():
     }
     response = client.post("/auth/login", data=user_creds)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json().get("access_token") == None
