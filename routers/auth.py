@@ -150,4 +150,4 @@ async def login(
             return {"access_token": token}
         else:
             logging.error(f"invlid_password -- from {__name__}.login")
-            raise HTTPException(401, detail="invalid_password")
+            raise HTTPException(404, detail="invalid_password")
