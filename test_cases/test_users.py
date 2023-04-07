@@ -4,6 +4,12 @@ from starlette import status
 
 client = TestClient(app=app)
 
+"""
+You will notice these test cases are for the api. Since\n
+the actual routes in api are still api routes i.e they\n
+return json instead of html
+"""
+
 
 def test_get_user_by_id():
     response = client.get("/users?user_id=6")
