@@ -1,13 +1,14 @@
 import logging
+from contextlib import asynccontextmanager
 
 from const import ERRORS
-from database_config import local_session
+from database_config import async_local_session, local_session
 from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from models import Todo
 from pydantic import BaseModel, Field
-from sqlalchemy import and_
+from sqlalchemy import and_, delete, select
 from starlette import status
 
 from .auth import get_current_user, get_db
@@ -18,6 +19,22 @@ todo_router = APIRouter(
 logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
 
 templates = Jinja2Templates(directory="templates")
+
+
+@asynccontextmanager
+async def get_async_db():
+    """
+    Calling this generator function will yield the DB object that can directly be used to query database.\n
+    What this async context manager does is close the session when our code stops using it.\n
+    """
+    try:
+        session = async_local_session
+        async with session() as db:
+            yield db
+    except Exception as e:
+        await db.rollback()
+    finally:
+        await db.close()
 
 
 class TodoModel(BaseModel):
@@ -36,9 +53,7 @@ class TodoModel(BaseModel):
 
 
 @todo_router.get("/home", status_code=status.HTTP_200_OK, response_model=None)
-async def get_home_page(
-    request: Request, db: local_session = Depends(get_db)
-) -> RedirectResponse | HTMLResponse:
+async def get_home_page(request: Request) -> RedirectResponse | HTMLResponse:
     """
     Verifys the user from access_token in cookies then return Home.html if token valid else\n
     redirect to login.
@@ -47,7 +62,9 @@ async def get_home_page(
     if user == None:
         logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.get_home_page")
         return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-    todos = db.query(Todo).filter(Todo.user_id == user.get("id")).all()
+    async with get_async_db() as db:
+        todos = await db.execute(select(Todo).where(Todo.user_id == user.get("id")))
+        todos = todos.scalars().all()
     return templates.TemplateResponse("home.html", {"request": request, "todos": todos})
 
 
@@ -55,7 +72,7 @@ async def get_home_page(
     "/edit_todo/{todo_id}", status_code=status.HTTP_200_OK, response_model=None
 )
 async def get_edit_todo_page(
-    request: Request, todo_id: int = Path(gt=-1), db: local_session = Depends(get_db)
+    request: Request, todo_id: int = Path(gt=-1)
 ) -> HTMLResponse | RedirectResponse:
     """
     Verifys the user from access_token in cookies then return edit.html if token valid else\n
@@ -67,11 +84,16 @@ async def get_edit_todo_page(
             f"{ERRORS['invalid_token']} -- from {__name__}.get_edit_todo_page"
         )
         return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-    todo = (
-        db.query(Todo)
-        .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
-        .first()
-    )
+    # todo = (
+    #     db.query(Todo)
+    #     .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
+    #     .first()
+    # )
+    async with get_async_db() as db:
+        todo = await db.execute(
+            select(Todo).where(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
+        )
+        todo = todo.scalars().first()
     return templates.TemplateResponse(
         "edit-todo.html", {"request": request, "todo": todo}
     )
@@ -96,7 +118,6 @@ async def add_todo(
     todo_title: str = Form(...),
     todo_description: str = Form(...),
     todo_priority: int = Form(...),
-    db: local_session = Depends(get_db),
 ) -> RedirectResponse | HTMLResponse:
     """
     Requires the todo modal to be passed as post body as Form and adds it to the db for the current user.\n
@@ -112,8 +133,9 @@ async def add_todo(
     new_todo.user_id = user.get("id")
     try:
         logging.info(f"Adding todo {new_todo.title} to db -- from {__name__}.add_todo")
-        db.add(new_todo)
-        db.commit()
+        async with get_async_db() as db:
+            db.add(new_todo)
+            await db.commit()
     except Exception as e:
         logging.exception(f"Exception")
         return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
@@ -129,7 +151,6 @@ async def update_todo(
     todo_title: str = Form(...),
     todo_description: str = Form(...),
     todo_priority: int = Form(...),
-    db: local_session = Depends(get_db),
 ) -> RedirectResponse | HTTPException:
     """
     Takes todo id as path param and updated todo as form body and updates the todo in the db with id passed as param.\n
@@ -139,11 +160,11 @@ async def update_todo(
     if user == None:
         logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.update_todo")
         return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-    result = (
-        db.query(Todo)
-        .filter(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
-        .first()
-    )
+    async with get_async_db() as db:
+        result = await db.execute(
+            select(Todo).where(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        )
+        result = result.scalars().first()
     if result == None:
         logging.error(f"{ERRORS['invalid_todo']} -- from {__name__}.update_todo")
         return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
@@ -153,8 +174,9 @@ async def update_todo(
         result.priority = todo_priority
     try:
         logging.info(f"Updating todo {result.id} -- from {__name__}.update_todo")
-        db.add(result)
-        db.commit()
+        async with get_async_db() as db:
+            db.add(result)
+            await db.commit()
     except Exception as e:
         logging.exception(f"Exceptions")
         return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
@@ -167,7 +189,6 @@ async def update_todo(
 async def delete_todo(
     request: Request,
     todo_id: int = Path(gt=-1),
-    db: local_session = Depends(get_db),
 ) -> RedirectResponse | HTMLResponse:
     """
     Takes todo id as path param deletes the todo in the db with id passed as param.\n
@@ -177,13 +198,16 @@ async def delete_todo(
     if user == None:
         logging.error(f"{ERRORS['invalid_token']} -- from {__name__}.delete_todo")
         return RedirectResponse("/auth/login", status_code=status.HTTP_303_SEE_OTHER)
-    db.query(Todo).filter(
-        and_(Todo.id == todo_id, Todo.user_id == user.get("id"))
-    ).delete()
-    try:
-        logging.info(f"Deleting todo {todo_id} -- from {__name__}.delete_todo")
-        db.commit()
-    except Exception as e:
-        logging.exception("Exception")
-        return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)
+    async with get_async_db() as db:
+        result = await db.execute(
+            delete(Todo).where(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        )
+        try:
+            logging.info(f"Deleting todo {todo_id} -- from {__name__}.delete_todo")
+            await db.commit()
+        except Exception as e:
+            logging.exception("Exception")
+            return RedirectResponse(
+                "/todos/home", status_code=status.HTTP_303_SEE_OTHER
+            )
     return RedirectResponse("/todos/home", status_code=status.HTTP_303_SEE_OTHER)

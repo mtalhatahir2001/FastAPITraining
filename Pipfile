@@ -7,7 +7,6 @@ name = "pypi"
 fastapi = "==0.95.0"
 pre-commit = "==3.2.1"
 uvicorn = {extras = ["standard"], version = "*"}
-sqlalchemy = "==2.0.7"
 psycopg2 = "==2.9.5"
 passlib = {extras = ["bcrypt"], version = "*"}
 python-jose = {extras = ["cryptography"], version = "*"}
@@ -15,6 +14,8 @@ python-multipart = "==0.0.6"
 alembic = "==1.10.2"
 aiofiles = "*"
 jinja2 = "*"
+asyncpg = "==0.27.0"
+sqlalchemy = {extras = ["asyncio"], version = "*"}
 
 [dev-packages]
 
