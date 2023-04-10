@@ -4,7 +4,7 @@ from database_config import local_session
 from fastapi import APIRouter, Depends, HTTPException, Path
 from models import Todo
 from pydantic import BaseModel, Field
-from sqlalchemy import and_
+from sqlalchemy import and_, delete, select
 from starlette import status
 
 from .auth import get_current_user, get_db
@@ -42,8 +42,9 @@ async def get_all_todos(
         logging.error(f"invalid_token -- from {__name__}.get_all_todos")
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
-        todos = db.query(Todo).filter(Todo.user_id == user.get("id")).all()
-        return todos
+        async with get_db() as db:
+            todos = await db.execute(select(Todo))
+        return todos.scalars().all()
 
 
 @todo_router.get("/{todo_id}", status_code=status.HTTP_200_OK)
@@ -60,11 +61,18 @@ async def get_todo_by_id(
         logging.error(f"invalid_token -- from {__name__}.get_todo_by_id")
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
-        todo = (
-            db.query(Todo)
-            .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
-            .first()
-        )
+        # todo = (
+        #     db.query(Todo)
+        #     .filter(and_(Todo.user_id == user.get("id"), Todo.id == todo_id))
+        #     .first()
+        # )
+        async with get_db() as db:
+            todo = await db.execute(
+                select(Todo).where(
+                    and_(Todo.user_id == user.get("id"), Todo.id == todo_id)
+                )
+            )
+        todo = todo.scalars().first()
         if todo == None:
             logging.error(f"invalid_todo_id -- from {__name__}.get_todo_by_id")
             raise HTTPException(status_code=404, detail="todo_not_found")
@@ -91,8 +99,9 @@ async def add_todo(
         logging.info(
             f"adding todo{new_todo.title} to db -- from {__name__}.get_todo_by_id"
         )
-        db.add(new_todo)
-        db.commit()
+        async with get_db() as db:
+            db.add(new_todo)
+            await db.commit()
     except Exception as e:
         logging.exception(f"Exception")
         raise HTTPException(status_code=500, detail="todo_not_inserted")
@@ -113,11 +122,11 @@ async def update_todo(
     if user == None:
         logging.error(f"invalid_token -- from {__name__}.update_todo")
         raise HTTPException(status_code=404, detail="user_not_found")
-    result = (
-        db.query(Todo)
-        .filter(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
-        .first()
-    )
+    async with get_db() as db:
+        result = await db.execute(
+            select(Todo).where(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        )
+        result = result.scalars().first()
     if result == None:
         logging.error(f"invalid_todo -- from {__name__}.update_todo")
         raise HTTPException(status_code=404, detail="todo_not_found")
@@ -127,8 +136,9 @@ async def update_todo(
         result.priority = todo.priority
     try:
         logging.info(f"updating todo{result.id} -- from {__name__}.update_todo")
-        db.add(result)
-        db.commit()
+        async with get_db() as db:
+            db.add(result)
+            await db.commit()
     except Exception as e:
         logging.exception(f"Exceptions")
         raise HTTPException(status_code=500, detail="todo_not_inserted")
@@ -148,13 +158,14 @@ async def delete_todo(
     if user == None:
         logging.error(f"invalid_token -- from {__name__}.delete_todo")
         raise HTTPException(status_code=404, detail="user_not_found")
-    db.query(Todo).filter(
-        and_(Todo.id == todo_id, Todo.user_id == user.get("id"))
-    ).delete()
-    try:
-        logging.info(f"deleting todo{todo_id} -- from {__name__}.delete_todo")
-        db.commit()
-    except Exception as e:
-        logging.exception("Exception")
-        raise HTTPException(status_code=500, detail="todo_not_deleted")
+    async with get_db() as db:
+        result = await db.execute(
+            delete(Todo).where(and_(Todo.id == todo_id, Todo.user_id == user.get("id")))
+        )
+        try:
+            logging.info(f"deleting todo{todo_id} -- from {__name__}.delete_todo")
+            await db.commit()
+        except Exception as e:
+            logging.exception("Exception")
+            raise HTTPException(status_code=500, detail="todo_not_deleted")
     return {"detail": "todo_deleted"}
