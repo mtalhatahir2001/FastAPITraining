@@ -1,13 +1,15 @@
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
-from database_config import local_session
+from database_config import async_local_session, local_session
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from models import User
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from starlette import status
 
 auth_router = APIRouter(
@@ -16,15 +18,21 @@ auth_router = APIRouter(
 logging.basicConfig(level=logging.DEBUG, filename="logs.txt")
 
 
-def get_db():
+@asynccontextmanager
+async def get_db():
     """
-    Calling this generator function will yield the DB object that can directly be used to query database.
+    Calling this generator function will yield the DB object that can directly be used to query database.\n
+    What this async context manager does is close the session when our code stops using it.\n
+
     """
     try:
-        db = local_session()
-        yield db
+        session = async_local_session
+        async with session() as db:
+            yield db
+    except Exception as e:
+        await db.rollback()
     finally:
-        db.close()
+        await db.close()
 
 
 # CryptContext the object of the scheme passed i.e bcrypt that can be used
@@ -109,9 +117,7 @@ class UserModel(BaseModel):
 
 
 @auth_router.post("/create_new", status_code=status.HTTP_201_CREATED)
-async def create_new_user(
-    new_user: UserModel, db: local_session = Depends(get_db)
-) -> dict[str, str]:
+async def create_new_user(new_user: UserModel) -> dict[str, str]:
     """
     Reads the user json object passed as pydantic object.\n
     and inserts that to DB
@@ -122,32 +128,49 @@ async def create_new_user(
         logging.info(
             f"adding user{user.username} to db -- from {__name__}.create_new_user"
         )
-        db.add(user)
-        db.commit()
+        async with get_db() as db:
+            db.add(user)
+            await db.commit()
     except Exception as e:
         logging.exception(f"Exception")
         raise HTTPException(status_code=500, detail="user_not_inserted")
     return {"detail": "new_user_created"}
 
 
-@auth_router.post("/login", status_code=status.HTTP_200_OK)
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: local_session = Depends(get_db),
-) -> dict[str, str]:
+async def verify_user_async(password: str, user: UserModel) -> dict[str, str]:
     """
-    Read the form data into OAuth2PasswordRequestForm that\n
-    expects the user to submit the form having username and password fields.\n
-    returns the token if login creds match else raise 401
+    This function is an async version of verify_password + generate_token.
+    Returns
+    -------
+    JWT token
     """
-    user = db.query(User).filter(User.username == form_data.username).first()
     if user == None:
         logging.error(f"invalid_user -- from {__name__}.login")
         raise HTTPException(status_code=404, detail="user_not_found")
     else:
-        if verify_pass(form_data.password, user.password):
+        if verify_pass(password, user.password):
             token = generate_token(user.id, user.username)
             return {"access_token": token}
         else:
             logging.error(f"invlid_password -- from {__name__}.login")
             raise HTTPException(404, detail="invalid_password")
+
+
+@auth_router.post("/login", status_code=status.HTTP_200_OK)
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> dict[str, str] | None:
+    """
+    Read the form data into OAuth2PasswordRequestForm that\n
+    expects the user to submit the form having username and password fields.\n
+    returns the token if login creds match else raise 401
+    """
+    async with get_db() as db:
+        try:
+            user = await db.execute(
+                select(User).where(User.username == form_data.username)
+            )
+            token = await verify_user_async(form_data.password, user.scalars().first())
+        except Exception as e:
+            logging.exception("Exception")
+        return token
