@@ -2,8 +2,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from const import ERRORS
-from database_config import async_local_session, local_session
-from fastapi import APIRouter, Depends, Form, HTTPException, Path, Request
+from database_config import async_local_session
+from fastapi import APIRouter, Form, HTTPException, Path, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from models import Todo
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, delete, select
 from starlette import status
 
-from .auth import get_current_user, get_db
+from .auth import get_current_user
 
 todo_router = APIRouter(
     prefix="/todos", tags=["Todos"], responses={401: {"user": "user_not_authenticated"}}
