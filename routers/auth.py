@@ -105,7 +105,7 @@ async def get_current_user(token: str = Depends(oauth_bearer)) -> dict[str, str]
         user_id = payload.get("user_id")
         username = payload.get("username")
         return {"id": user_id, "username": username}
-    except JWTError:
+    except JWTError as e:
         logging.error(f"invalid_token -- from {__name__}.get_current_user")
         raise HTTPException(status_code=401, detail="unauthorized_user")
 
