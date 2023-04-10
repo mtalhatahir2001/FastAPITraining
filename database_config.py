@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 """
-Connecting string for the async connection is different since\n
+Connection string for the async connection is different since\n
 async uses asyncpg as a connector package while sync version uses\n
 psycopy2 as connector.
 """
