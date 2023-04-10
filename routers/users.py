@@ -54,7 +54,7 @@ def get_single_user(user_id: int, db: local_session) -> UserModel:
 @users_router.get("", status_code=status.HTTP_200_OK)
 async def get_user_by_id(
     user_id: int = Query(gt=-1),
-    db: local_session = Depends(get_db),
+    db: local_session = Depends(get_sync_db),
 ) -> UserModel:
     """
     Takes user id as Query paramter and return the user info.
@@ -66,7 +66,7 @@ async def get_user_by_id(
 @users_router.get("/{user_id}", status_code=status.HTTP_200_OK)
 async def get_user_by_id(
     user_id: int = Path(gt=-1),
-    db: local_session = Depends(get_db),
+    db: local_session = Depends(get_sync_db),
 ) -> UserModel:
     """
     Takes user id as Query paramter and return the user info.
@@ -76,7 +76,7 @@ async def get_user_by_id(
 
 
 @users_router.get("/", status_code=status.HTTP_200_OK, response_model=None)
-async def get_all_users(db: local_session = Depends(get_db)) -> list[UserModel]:
+async def get_all_users(db: local_session = Depends(get_sync_db)) -> list[UserModel]:
     """
     Returns the list of all the users in a current db session.
     """
@@ -88,7 +88,7 @@ async def get_all_users(db: local_session = Depends(get_db)) -> list[UserModel]:
 async def modify_current_user(
     user_info: PassInfo,
     user: dict = Depends(get_current_user),
-    db: local_session = Depends(get_db),
+    db: local_session = Depends(get_sync_db),
 ) -> dict[str, str]:
     """
     This will be used to change user password.\n
@@ -120,7 +120,7 @@ async def modify_current_user(
 
 @users_router.delete("/delete", status_code=status.HTTP_201_CREATED)
 async def delete_current_user(
-    user: dict = Depends(get_current_user), db: local_session = Depends(get_db)
+    user: dict = Depends(get_current_user), db: local_session = Depends(get_sync_db)
 ) -> dict[str, str]:
     """
     Takes no param. Will take the user Id form JWT Token passed in header.\n

@@ -35,17 +35,17 @@ async def get_db():
         await db.close()
 
 
-# def get_db():
-#     """
-#     Calling this generator function will yield the DB object that can directly be used to query database.\n
-#     """
-#     try:
-#         db = local_session()
-#         yield db
-#     except Exception as e:
-#         db.rollback()
-#     finally:
-#         db.close()
+def get_sync_db():
+    """
+    Calling this generator function will yield the DB object that can directly be used to query database.\n
+    """
+    try:
+        db = local_session()
+        yield db
+    except Exception as e:
+        db.rollback()
+    finally:
+        db.close()
 
 
 # CryptContext the object of the scheme passed i.e bcrypt that can be used
