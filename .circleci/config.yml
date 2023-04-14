@@ -13,7 +13,7 @@ jobs:
           # Commenting below 2 commmands since pytest will fail due to async DB calls.
           # In a real project these 2 must NOT be commented.
           name: Run tests
-          # command: python -m pytest
+          command: python -m pytest
       - persist_to_workspace:
           root: ~/project
           paths:
