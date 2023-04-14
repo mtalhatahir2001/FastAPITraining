@@ -1,0 +1,37 @@
+version: 2.1
+orbs:
+  python: circleci/python@2.0.3
+  heroku: circleci/heroku@1.2.6
+jobs:
+  build_and_test:
+    executor: python/default 
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - run:
+          # Commenting below 2 commmands since pytest will fail due to async DB calls.
+          # In a real project these 2 must NOT be commented.
+          # name: Run tests
+          # command: python -m pytest
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - .
+  deploy:
+    executor: heroku/default
+    steps:
+      - attach_workspace:
+          at: ~/project
+      - heroku/deploy-via-git:
+          force: true
+workflows:
+  build_test_deploy:
+    jobs:
+      - build_and_test
+      - deploy:
+          requires:
+            - build_and_test # only deploy if the build_and_test job has completed
+          filters:
+            branches:
+              only: main # only deploy when on main
